@@ -69,7 +69,7 @@ def main():
        help='the path to the video',
        default=None
     )
-    my_parser.add_format(
+    my_parser.add_argument(
         "--dir", "--directory",
         # TODO implement this
     )
@@ -107,7 +107,7 @@ def main():
         # For some reason, vlc will output an invalid file if the extension is not mp4
         # this may be due to an issue with the format of the piped output versus
         # the format given by --print filename
-        filename = removesuffix(_filename).replace(" ", "_")
+        filename = removesuffix(_filename).replace(" ", "_").replace(":", "_").replace("/", "_").replace("\\", "_").replace("?", "_").replace("*", "_").replace("\"", "_").replace("<", "_").replace(">", "_").replace("|", "_").replace(",", "_")
 
         vlc_command = [
             "vlc.exe",
