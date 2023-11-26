@@ -3,6 +3,7 @@ import argparse
 import os
 import random
 import subprocess
+import time
 import shutil
 from urllib.parse import urlparse
 
@@ -61,12 +62,16 @@ def random_video_wallpaper(video_dir):
 def main():
     my_parser = argparse.ArgumentParser(description='Play a video')
     my_parser.add_argument(
-       'video',
-       metavar='video',
+       'video_or_url',
+       metavar='video_or_url',
        type=str,
        nargs='?',
        help='the path to the video',
        default=None
+    )
+    my_parser.add_format(
+        "--dir", "--directory",
+        # TODO implement this
     )
     my_parser.add_argument(
         '--format',
@@ -77,37 +82,50 @@ def main():
     args = my_parser.parse_args()
 
     # XXX add option to specify video directory for download
-    if args.video is None:
+    if args.video_or_url is None:
         video_dir = DEFAULT_VIDEO_DIR
     else:
-        video_dir = args.video
+        video_dir = args.video_or_url
 
-    video_a_url = is_url(args.video)
+    video_a_url = is_url(args.video_or_url)
 
     if args.format:
         ytdlp_format = ["-f", args.format]
     else:
         ytdlp_format = []
-    if is_url(args.video):
+    if is_url(args.video_or_url):
         with YoutubeDL() as ydl:
-            info_dict = ydl.extract_info(args.video, download=False)
+            info_dict = ydl.extract_info(args.video_or_url, download=False)
 
-        yt_command = ["yt-dlp", *ytdlp_format, "-o", "-", args.video]
-        _filename = subprocess.getoutput(f'yt-dlp --print filename {args.video}')
+        yt_command = ["yt-dlp", *ytdlp_format, "-o", "-", args.video_or_url]
+        _filename = subprocess.getoutput(f'yt-dlp --print filename {args.video_or_url}')
         def removesuffix(s):
             return s[:s.rfind(".")]
-        # XXX the format from print filename is not the same as the format for piping
+        # XXX is format from print filename is not the same as the format for piping
         # How do I determine the filetype from the piped output?
-        filename = removesuffix(_filename)
+
+        # For some reason, vlc will output an invalid file if the extension is not mp4
+        # this may be due to an issue with the format of the piped output versus
+        # the format given by --print filename
+        filename = removesuffix(_filename).replace(" ", "_")
 
         vlc_command = [
             "vlc.exe",
             "-",
+            "--video-wallpaper",
+            "--loop",
             # too many brackets
+            # still audio is not preserved
+            "--sout=#duplicate{dst=std{access=file,acode=aac,mux=mp4,dst='" + filename + ".mp4'},dst=display}"
             # "--sout=#duplicate{dst=display,{dst=standard{access=file,dst='out.mp4'}}}"
-            "--sout=#duplicate{dst=display,{dst=standard{access=file,dst='" + filename + "'}}}"
+            # "--sout=#duplicate{dst=display,{dst=standard{access=file,dst='" + filename + "'}}}"
             # "--sout=#duplicate{dst=display}"
         ]
+        # How do I check if the clip has ended?
+        # Idea: check if the file size has changed
+        # Idea: check if the file has been modified
+        # Idea: check if the file has been modified in the last 5 seconds
+        # Idea: Generate a vlc playlist and play it
         print(yt_command)
         print(vlc_command)
         yt_proc = subprocess.Popen(yt_command, stdout=subprocess.PIPE, shell=True)
@@ -115,9 +133,12 @@ def main():
         try:
             vlc_proc = subprocess.Popen(vlc_command, stdin=yt_proc.stdout, shell=True)
         finally:
+            # while True:
+            #     timejjj.sleep(0.1)
+            # TODO move filename to video dir directory
             if vlc_proc:
                 vlc_proc.communicate()
-            if os.path.exists(filename):
+            if os.path.exists(filename + ".mp4"):
                 print(f"file written to {filename}")
 
             # if not os.path.exists(filename):
@@ -130,8 +151,8 @@ def main():
             #     print("No extension found")
             #     final_filename = filename
             # print(f"file written to {final_filename}")
-    elif args.video:
-        play_specific_video(args.video)
+    elif args.video_or_url:
+        play_specific_video(args.video_or_url)
     else:
         print("No video specified, playing a random video")
         random_video_wallpaper(video_dir)
