@@ -1,0 +1,6 @@
+Currently tested with yt-dlp==2023.11.16 this version is not locked in the requirements file
+because yt-dlp frequently breaks and updates are required to fix it.
+
+This program requires VLC to be installed.
+
+install_dir="~\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\"
