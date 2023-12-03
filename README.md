@@ -5,7 +5,10 @@ Generate moving wallpapers on Windows
 
 Pull requests are welcome for reasonable features and other operating system support
 
-1. [installation](./install.txt)
+# Install
+
+    - install vlc
+    - in cmd or pwsh run `pip install -r requirements.txt`
 
 Download and view the video at the same time
 
@@ -14,6 +17,25 @@ Videos are stored at ~/Videos/VideoWallpapers
 Usage:
 
     python movingwallpaper.py
+
+To select a random video from ~/Videos/VideoWallpapers
+
+Background youtube video:
+
+    python movingwallpaper.py [url]
+
+
+Download videos for later [cmd]:
+
+    cd %USERPROFILE%/Videos/VideoWallpapers
+    yt-dlp.exe [url]
+
+
+Download videos for later [pwsh]:
+
+    cd ~/Videos/VideoWallpapers
+    yt-dlp.exe [url]
+
 
 Help:
 
