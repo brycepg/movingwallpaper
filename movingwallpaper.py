@@ -9,9 +9,10 @@ from urllib.parse import urlparse
 
 from yt_dlp import YoutubeDL
 import fleep
-import pygetwindow as gw
 import win32gui
 import win32con
+import win32process
+import psutil
 
 DEFAULT_VIDEO_DIR = "~/Videos/VideoWallpapers"
 
@@ -24,19 +25,49 @@ DEFAULT_VIDEO_DIR = "~/Videos/VideoWallpapers"
 # - figure out how to more seamlessly determine the output file extension
 
 
+def get_hwnds_for_pid (pid):
+  def callback (hwnd, hwnds):
+    if win32gui.IsWindowVisible (hwnd) and win32gui.IsWindowEnabled (hwnd):
+      _, found_pid = win32process.GetWindowThreadProcessId (hwnd)
+      if found_pid == pid:
+        hwnds.append (hwnd)
+    return True
+
+  hwnds = []
+  win32gui.EnumWindows (callback, hwnds)
+  return hwnds
+
 
 def launchWithoutConsole(*args):
     """Launches 'command' windowless and waits until finished"""
     startupinfo = subprocess.STARTUPINFO()
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     popen_ret = subprocess.Popen(args, startupinfo=startupinfo)
-    import time
-    time.sleep(0.75)
-    window_seq = gw.getWindowsWithTitle('VLC media player')
-    print(window_seq)
-    window = window_seq[0]
-    win32gui.SetWindowPos(window._hWnd, win32con.HWND_BOTTOM, 0, 0, 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE)
-    hide_window(window._hWnd)
+    # XXX let's iteratively apply these values to the window
+    print("vlc pid", popen_ret.pid)
+    process = psutil.Process(popen_ret.pid)
+    handles_for_pid = []
+    TIMEOUT = 10 # seconds
+    sleep_time = 0.030
+    cumtime = 0
+    while not handles_for_pid:
+        if cumtime > TIMEOUT:
+            print("Backgrounding timed out")
+            break
+        cpids = process.children(recursive=True)
+        # We could save some processing time by having two separate loops
+        # one for when a child pid is found and then one for
+        # the window handle
+        if cpids:
+            handles_for_pid = get_hwnds_for_pid(cpids[0].pid)
+        # 30ms
+        cumtime += sleep_time
+        time.sleep(sleep_time)
+    print("waiting for pid took: ", cumtime)
+    print("handles_for_pid: ", handles_for_pid)
+    hwnd = handles_for_pid[0]
+    win32gui.SetWindowPos(hwnd, win32con.HWND_BOTTOM, 0, 0, 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE)
+    hide_window(hwnd)
     return popen_ret
 
 

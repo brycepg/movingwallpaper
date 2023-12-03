@@ -1,5 +1,5 @@
 yt-dlp
 fleep==1.0.1
 pywin32==304
-pygetwindow==0.0.9
 pyautogui==0.9.54
+psutil==5.9.5
