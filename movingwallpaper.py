@@ -9,6 +9,9 @@ from urllib.parse import urlparse
 
 from yt_dlp import YoutubeDL
 import fleep
+import pygetwindow as gw
+import win32gui
+import win32con
 
 DEFAULT_VIDEO_DIR = "~/Videos/VideoWallpapers"
 
@@ -26,7 +29,24 @@ def launchWithoutConsole(*args):
     """Launches 'command' windowless and waits until finished"""
     startupinfo = subprocess.STARTUPINFO()
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-    return subprocess.Popen(args, startupinfo=startupinfo).wait()
+    popen_ret = subprocess.Popen(args, startupinfo=startupinfo)
+    import time
+    time.sleep(0.75)
+    window_seq = gw.getWindowsWithTitle('VLC media player')
+    print(window_seq)
+    window = window_seq[0]
+    win32gui.SetWindowPos(window._hWnd, win32con.HWND_BOTTOM, 0, 0, 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE)
+    hide_window(window._hWnd)
+    return popen_ret
+
+
+def hide_window(hwnd):
+   # Get the current window style
+   style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
+   # Add the WS_EX_TOOLWINDOW style
+   style |= win32con.WS_EX_TOOLWINDOW
+   # Set the new window style
+   win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, style)
 
 
 def play_specific_video(video_path):
@@ -76,6 +96,10 @@ def main():
     my_parser.add_argument(
         '--format',
     )
+
+    my_parser.add_argument(
+        "--ytargs",
+    )
     # --no-audio
     # --audio
 
@@ -89,10 +113,12 @@ def main():
 
     video_a_url = is_url(args.video_or_url)
 
+    import shlex
+    ytdlp_format = []
     if args.format:
-        ytdlp_format = ["-f", args.format]
-    else:
-        ytdlp_format = []
+        ytdlp_format.extend(["-f", args.format])
+    if args.ytargs:
+        ytdlp_format.extend(shlex.split(args.ytargs))
     if is_url(args.video_or_url):
         with YoutubeDL() as ydl:
             info_dict = ydl.extract_info(args.video_or_url, download=False)
@@ -160,6 +186,8 @@ def main():
 
 
 def is_url(s):
+    if not s:
+        return False
     # Not comprehensive
     if urlparse(s).netloc:
         return True
